@@ -1,0 +1,6 @@
+Coloque aqui as imagens:
+- LOGO_GRANDE_SEM_FUNDO.png (logo grande para as telas de boas-vindas e login)
+- LOGO_LADO_SEM_FUNDO.png (logo menor para o cabeçalho)
+
+As imagens devem ter fundo transparente (formato PNG) para melhor integração visual.
+
