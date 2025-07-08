@@ -1,6 +1,6 @@
 # EduGram App - MVP Mobile
 
-Este é um aplicativo móvel desenvolvido com Expo/React Native baseado no protótipo web EduGram. O app oferece uma plataforma educacional com feed de conteúdo, árvore do conhecimento, quiz interativo e perfil de usuário.
+Este é um aplicativo móvel desenvolvido com Expo/React Native baseado no protótipo EduGram. O app oferece uma plataforma educacional com feed de conteúdo, árvore do conhecimento, quiz interativo e perfil de usuário.
 
 ## 🚀 Funcionalidades
 
