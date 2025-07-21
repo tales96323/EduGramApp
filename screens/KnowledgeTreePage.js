@@ -277,7 +277,7 @@ export default function KnowledgeTreePage() {
           </style>
       </head>
       <body>
-          <svg id="d3-svg" width="100%" height="100%"></svg>
+          <svg id="d3-svg" width="100%" height=700></svg>
           <script>
               const data = ${d3Data};
               const tailwindColorMap = ${colorMap};
@@ -489,7 +489,7 @@ export default function KnowledgeTreePage() {
             onMessage={onWebViewMessage}
             javaScriptEnabled={true}
             domStorageEnabled={true}
-            scrollEnabled={false}
+            scrollEnabled={true}
           />
         )}
       </View>
