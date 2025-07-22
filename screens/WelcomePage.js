@@ -27,9 +27,10 @@ const WelcomePage = ({ setCurrentPage }) => {
               resizeMode="contain"
               onError={() => console.log('Logo image not found')}
             />
-            <Text style={styles.title}>Welcome!</Text>
+            <Text style={styles.title}>Bem-vindo!</Text>
             <Text style={styles.subtitle}>
-              Thanks for joining! Access or create your account below, and get started on your journey!
+              Parabéns por fazer parte de nossa comunidade de divulgação científica!{'\n'}{'\n'}
+              Faça o login e acesse os conteúdos publicados.
             </Text>
           </View>
           
@@ -68,14 +69,14 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   logoContainer: {
-    flex: 1,
+    flex: 0.8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logo: {
-    width: 128,
-    height: 128,
-    marginBottom: 32,
+    width: 168,
+    height: 168,
+    marginBottom: 30,
   },
   title: {
     fontSize: 36,
