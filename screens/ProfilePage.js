@@ -64,14 +64,14 @@ const ProfilePage = ({ userType = 'aluno' }) => {
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
             <Image
-              source={{ uri: 'https://placehold.co/100x100/4f46e5/ffffff?text=U' }}
+              source={require('../assets/images/perfil-joao.jpg')}
               style={styles.profileImage}
             />
             <TouchableOpacity style={styles.editImageButton}>
               <Ionicons name="camera" size={16} color="white" />
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.userName}>João Silva</Text>
           <Text style={styles.userType}>{userInfo.title}</Text>
           <Text style={styles.userSubtitle}>{userInfo.subtitle}</Text>

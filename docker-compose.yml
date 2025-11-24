@@ -1,0 +1,31 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: edugram
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://postgres:example@db:5432/edugram
+    ports:
+      - "19000:19000"   # Expo
+      - "8081:8081"     # Metro bundler
+    depends_on:
+      - db
+    volumes:
+      - ./:/usr/src/app
+    tty: true
+
+volumes:
+  pgdata:
