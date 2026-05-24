@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { Sparkles } from 'lucide-react-native'; // Importar Sparkles para o botão Gerar Quiz
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView } from 'react-native';
+import { Sparkles } from 'lucide-react-native';
 
 export default function QuizPage() {
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -12,7 +12,6 @@ export default function QuizPage() {
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
   const [quizError, setQuizError] = useState('');
 
-  // Use generated questions if available, otherwise use default
   const currentQuizQuestions = generatedQuizQuestions.length > 0 ? generatedQuizQuestions : [
     {
       question: 'Qual planeta do nosso sistema solar é conhecido como o "Planeta Vermelho"?',
@@ -33,9 +32,7 @@ export default function QuizPage() {
 
   const currentQuestion = currentQuizQuestions[questionIndex];
 
-  const handleAnswerClick = (answer) => {
-    setSelectedAnswer(answer);
-  };
+  const handleAnswerClick = (answer) => setSelectedAnswer(answer);
 
   const handleSubmitQuiz = () => {
     setShowResult(true);
@@ -54,12 +51,11 @@ export default function QuizPage() {
       setQuestionIndex(questionIndex + 1);
     } else {
       setQuizMessage('Quiz finalizado! Parabéns!');
-      setQuestionIndex(0); // Resets the quiz for demo purposes
-      setGeneratedQuizQuestions([]); // Clear generated quiz
+      setQuestionIndex(0);
+      setGeneratedQuizQuestions([]);
     }
   };
 
-  // Function to generate quiz using Gemini API
   const generateQuiz = async () => {
     if (!quizTopic.trim()) {
       setQuizError('Por favor, insira um tópico para gerar o quiz.');
@@ -72,150 +68,151 @@ export default function QuizPage() {
     setSelectedAnswer(null);
     setShowResult(false);
     setQuizMessage('');
-
     try {
       const prompt = `Gere um quiz de múltipla escolha com 3 perguntas sobre "${quizTopic}". Para cada pergunta, forneça 4 opções e indique qual é a resposta correta. Formate a resposta como um array JSON de objetos, onde cada objeto tem 'question' (string), 'options' (array de strings) e 'correctAnswer' (string).`;
-      let chatHistory = [];
-      chatHistory.push({ role: "user", parts: [{ text: prompt }] });
       const payload = {
-          contents: chatHistory,
-          generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: {
-                  type: "ARRAY",
-                  items: {
-                      type: "OBJECT",
-                      properties: {
-                          "question": { "type": "STRING" },
-                          "options": {
-                              "type": "ARRAY",
-                              "items": { "type": "STRING" }
-                          },
-                          "correctAnswer": { "type": "STRING" }
-                      },
-                      "propertyOrdering": ["question", "options", "correctAnswer"]
-                  }
-              }
-          }
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                question: { type: 'STRING' },
+                options: { type: 'ARRAY', items: { type: 'STRING' } },
+                correctAnswer: { type: 'STRING' },
+              },
+              propertyOrdering: ['question', 'options', 'correctAnswer'],
+            },
+          },
+        },
       };
-      const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=`;
       const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-
       const result = await response.json();
-      if (result.candidates && result.candidates.length > 0 &&
-          result.candidates[0].content && result.candidates[0].content.parts &&
-          result.candidates[0].content.parts.length > 0) {
-        const json = result.candidates[0].content.parts[0].text;
-        const parsedJson = JSON.parse(json);
-        if (Array.isArray(parsedJson) && parsedJson.length > 0) {
-          setGeneratedQuizQuestions(parsedJson);
+      const json = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (json) {
+        const parsed = JSON.parse(json);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setGeneratedQuizQuestions(parsed);
         } else {
           setQuizError('Não foi possível gerar um quiz com o tópico fornecido. Tente outro tópico.');
         }
       } else {
-        console.error("Erro ao gerar o quiz: Estrutura de resposta inesperada", result);
         setQuizError('Erro ao gerar o quiz. Por favor, tente novamente.');
       }
     } catch (error) {
-      console.error("Erro na chamada da API Gemini para geração de quiz:", error);
+      console.error('Erro Gemini quiz:', error);
       setQuizError('Erro de rede ou servidor ao gerar o quiz. Verifique a sua conexão.');
     } finally {
       setIsLoadingQuiz(false);
     }
   };
 
-  return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.quizCard}>
-        <Text style={styles.quizTitle}>Quiz de Conhecimento</Text>
+  const optionClass = (option) => {
+    let cls = 'w-full p-3 rounded-lg border-2 ';
+    if (showResult && option === currentQuestion.correctAnswer) {
+      cls += 'bg-green-100 border-green-500';
+    } else if (showResult && selectedAnswer === option && option !== currentQuestion.correctAnswer) {
+      cls += 'bg-red-100 border-red-500';
+    } else if (selectedAnswer === option) {
+      cls += 'bg-primary-100 border-primary-500';
+    } else {
+      cls += 'bg-gray-50 border-gray-200 hover:bg-gray-100';
+    }
+    return cls;
+  };
 
-        {/* Seção de Geração de Quiz */}
-        <View style={styles.quizGenerationSection}>
-          <Text style={styles.quizGenerationPrompt}>Gerar um novo Quiz por Tópico:</Text>
+  return (
+    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, alignItems: 'center', justifyContent: 'center' }}>
+      <View className="bg-white rounded-xl shadow-md p-6 w-full max-w-md lg:max-w-2xl">
+        <Text className="text-2xl lg:text-3xl font-bold text-gray-800 mb-4 text-center">
+          Quiz de Conhecimento
+        </Text>
+
+        <View className="mb-6 pb-4 border-b border-gray-200">
+          <Text className="text-gray-700 font-semibold mb-3">Gerar um novo Quiz por Tópico:</Text>
           <TextInput
-            style={styles.quizTopicInput}
+            className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 mb-3"
             placeholder="Ex: Buracos Negros, Biologia Celular..."
             value={quizTopic}
             onChangeText={setQuizTopic}
           />
-          <TouchableOpacity
-            style={[styles.generateQuizButton, isLoadingQuiz && styles.disabledButton]}
+          <Pressable
             onPress={generateQuiz}
             disabled={isLoadingQuiz}
+            className={`w-full bg-purple-600 hover:bg-purple-700 py-3 rounded-lg flex-row items-center justify-center ${isLoadingQuiz ? 'opacity-50' : ''}`}
           >
             {isLoadingQuiz ? (
-              <ActivityIndicator size="small" color="#ffffff" style={styles.buttonSpinner} />
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
             ) : (
-              <>
-                <Sparkles size={16} color="#ffffff" style={styles.buttonIcon} />
-                <Text style={styles.generateQuizButtonText}>Gerar Quiz</Text>
-              </>
+              <Sparkles size={16} color="#fff" style={{ marginRight: 8 }} />
             )}
-          </TouchableOpacity>
-          {quizError ? <Text style={styles.errorMessage}>{quizError}</Text> : null}
+            <Text className="text-white font-semibold">Gerar Quiz</Text>
+          </Pressable>
+          {quizError ? (
+            <Text className="text-red-600 text-xs mt-2 text-center">{quizError}</Text>
+          ) : null}
         </View>
 
-        {/* Exibir Perguntas do Quiz */}
         {currentQuizQuestions.length > 0 && !isLoadingQuiz && !quizError ? (
           <>
-            <Text style={styles.questionCounter}>
+            <Text className="text-gray-600 text-sm mb-6 text-center">
               Questão {questionIndex + 1} de {currentQuizQuestions.length}
             </Text>
 
-            <View style={styles.questionSection}>
-              <Text style={styles.questionText}>{currentQuestion.question}</Text>
-              <View style={styles.optionsContainer}>
+            <View className="mb-6">
+              <Text className="text-lg lg:text-xl font-semibold text-gray-900 mb-4">
+                {currentQuestion.question}
+              </Text>
+              <View className="gap-3">
                 {currentQuestion.options.map((option) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={option}
-                    style={[
-                      styles.optionButton,
-                      selectedAnswer === option ? styles.selectedOption : null,
-                      showResult && option === currentQuestion.correctAnswer ? styles.correctOption : null,
-                      showResult && selectedAnswer === option && option !== currentQuestion.correctAnswer ? styles.incorrectOption : null,
-                    ]}
                     onPress={() => handleAnswerClick(option)}
                     disabled={showResult}
+                    className={optionClass(option)}
                   >
-                    <Text style={styles.optionButtonText}>{option}</Text>
-                  </TouchableOpacity>
+                    <Text className="text-gray-800">{option}</Text>
+                  </Pressable>
                 ))}
               </View>
             </View>
 
             {!showResult ? (
-              <TouchableOpacity
-                style={[styles.checkAnswerButton, selectedAnswer === null && styles.disabledButton]}
+              <Pressable
                 onPress={handleSubmitQuiz}
                 disabled={selectedAnswer === null}
+                className={`w-full bg-primary-600 hover:bg-primary-700 py-3 rounded-lg items-center ${selectedAnswer === null ? 'opacity-50' : ''}`}
               >
-                <Text style={styles.checkAnswerButtonText}>Verificar Resposta</Text>
-              </TouchableOpacity>
+                <Text className="text-white font-semibold">Verificar Resposta</Text>
+              </Pressable>
             ) : (
-              <View style={styles.resultSection}>
-                <Text style={[styles.quizMessage, quizMessage.includes('Correto') ? styles.successMessage : styles.errorMessage]}>
+              <View className="mt-6 items-center">
+                <Text
+                  className={`font-bold text-xl mb-4 text-center ${quizMessage.includes('Correto') ? 'text-green-600' : 'text-red-600'}`}
+                >
                   {quizMessage}
                 </Text>
-                <TouchableOpacity
-                  style={styles.nextQuestionButton}
+                <Pressable
                   onPress={handleNextQuestion}
+                  className="w-full bg-primary-600 hover:bg-primary-700 py-3 rounded-lg items-center"
                 >
-                  <Text style={styles.nextQuestionButtonText}>
+                  <Text className="text-white font-semibold">
                     {questionIndex < currentQuizQuestions.length - 1 ? 'Próxima Questão' : 'Reiniciar Quiz'}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             )}
           </>
         ) : (
           !isLoadingQuiz && !quizError && (
-            <Text style={styles.noQuizText}>
+            <Text className="text-gray-500 text-center mt-4">
               Insira um tópico acima para gerar um quiz.
             </Text>
           )
@@ -224,180 +221,3 @@ export default function QuizPage() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 16, // p-4
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quizCard: {
-    backgroundColor: '#ffffff', // bg-white
-    borderRadius: 12, // rounded-xl
-    shadowColor: '#000', // shadow-md
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4, // Para Android
-    padding: 24, // p-6
-    width: '100%',
-    maxWidth: 400, // max-w-md
-  },
-  quizTitle: {
-    fontSize: 24, // text-2xl
-    fontWeight: 'bold',
-    color: '#1f2937', // text-gray-800
-    marginBottom: 16, // mb-4
-    textAlign: 'center',
-  },
-  quizGenerationSection: {
-    marginBottom: 24, // mb-6
-    paddingBottom: 16, // pb-4
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb', // border-gray-200
-  },
-  quizGenerationPrompt: {
-    color: '#374151', // text-gray-700
-    fontSize: 16, // text-md
-    fontWeight: '600', // font-semibold
-    marginBottom: 12, // mb-3
-  },
-  quizTopicInput: {
-    width: '100%',
-    padding: 12, // p-3
-    borderWidth: 1,
-    borderColor: '#d1d5db', // border-gray-300
-    borderRadius: 8, // rounded-lg
-    color: '#111827', // text-gray-900
-    marginBottom: 12, // mb-3
-  },
-  generateQuizButton: {
-    width: '100%',
-    backgroundColor: '#9333ea', // bg-purple-600
-    paddingVertical: 12, // py-3
-    borderRadius: 8, // rounded-lg
-    fontWeight: '600', // font-semibold
-    shadowColor: '#000', // shadow-md
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4, // Para Android
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  generateQuizButtonText: {
-    color: '#ffffff', // text-white
-    fontWeight: '600',
-  },
-  buttonSpinner: {
-    marginRight: 8, // -ml-1 mr-2
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  errorMessage: {
-    color: '#dc2626', // text-red-500
-    fontSize: 12, // text-sm
-    marginTop: 8, // mt-2
-    textAlign: 'center',
-  },
-  questionCounter: {
-    color: '#4b5563', // text-gray-600
-    fontSize: 14, // text-sm
-    marginBottom: 24, // mb-6
-    textAlign: 'center',
-  },
-  questionSection: {
-    marginBottom: 24, // mb-6
-  },
-  questionText: {
-    fontSize: 18, // text-lg
-    fontWeight: '600', // font-semibold
-    color: '#111827', // text-gray-900
-    marginBottom: 16, // mb-4
-  },
-  optionsContainer: {
-    gap: 12, // space-y-3
-  },
-  optionButton: {
-    width: '100%',
-    textAlign: 'left',
-    padding: 12, // p-3
-    borderRadius: 8, // rounded-lg
-    borderWidth: 2,
-    borderColor: '#e5e7eb', // border-gray-200
-    backgroundColor: '#f9fafb', // bg-gray-50
-  },
-  optionButtonText: {
-    color: '#1f2937', // text-gray-800
-  },
-  selectedOption: {
-    backgroundColor: '#e0e7ff', // bg-indigo-100
-    borderColor: '#6366f1', // border-indigo-500
-  },
-  correctOption: {
-    backgroundColor: '#dcfce7', // bg-green-100
-    borderColor: '#22c55e', // border-green-500
-  },
-  incorrectOption: {
-    backgroundColor: '#fee2e2', // bg-red-100
-    borderColor: '#ef4444', // border-red-500
-  },
-  checkAnswerButton: {
-    width: '100%',
-    backgroundColor: '#4f46e5', // bg-indigo-600
-    paddingVertical: 12, // py-3
-    borderRadius: 8, // rounded-lg
-    fontWeight: '600', // font-semibold
-    shadowColor: '#000', // shadow-md
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4, // Para Android
-    alignItems: 'center',
-  },
-  checkAnswerButtonText: {
-    color: '#ffffff', // text-white
-    fontWeight: '600',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  resultSection: {
-    marginTop: 24, // mt-6
-    alignItems: 'center',
-  },
-  quizMessage: {
-    fontWeight: 'bold',
-    fontSize: 20, // text-xl
-    marginBottom: 16, // mb-4
-    textAlign: 'center',
-  },
-  successMessage: {
-    color: '#16a34a', // text-green-600
-  },
-  nextQuestionButton: {
-    width: '100%',
-    backgroundColor: '#4f46e5', // bg-indigo-600
-    paddingVertical: 12, // py-3
-    borderRadius: 8, // rounded-lg
-    fontWeight: '600', // font-semibold
-    shadowColor: '#000', // shadow-md
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4, // Para Android
-    alignItems: 'center',
-  },
-  nextQuestionButtonText: {
-    color: '#ffffff', // text-white
-    fontWeight: '600',
-  },
-  noQuizText: {
-    color: '#6b7280', // text-gray-500
-    textAlign: 'center',
-    marginTop: 16, // mt-4
-  },
-});

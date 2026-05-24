@@ -8,18 +8,145 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("aluno")
+
+  bio         String?
+  avatarUrl   String?
+  institution String?
+  field       String?
+  verified    Boolean  @default(false)
+
+  quizPoints       Int @default(0)
+  quizzesCompleted Int @default(0)
+  articlesRead     Int @default(0)
+  postsCount       Int @default(0)
+  followersCount   Int @default(0)
+  followingCount   Int @default(0)
+
+  profilePic String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts Post[]
+
+  following Follow[] @relation("FollowerToFollowing")
+  followers Follow[] @relation("FollowingToFollower")
+
+  postLikes  PostLike[]
+  savedPosts SavedPost[]
+
+  quizAttempts QuizAttempt[]
+
+  refreshTokens RefreshToken[]
+
+  @@index([role])
+}
+
+model Follow {
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("FollowerToFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("FollowingToFollower", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+}
+
 model Post {
   id                Int      @id @default(autoincrement())
+  authorId          Int?
   author            String
   profilePic        String
   title             String
   image             String
   fullContent       String
   simplifiedSnippet String?
-  likes             Int      @default(0)
+
+  abstract   String?
+  keywords   String[] @default([])
+  doi        String?
+  references String?  @db.Text
+
+  likesCount        Int      @default(0)
   comments          Int      @default(0)
   createdAt         DateTime @default(now())
   isSimplifying     Boolean  @default(false)
   published         Boolean  @default(true)
   metadata          Json?
+  pdfFilename       String?
+  pdfOriginalName   String?
+  supplementaryFilename     String?
+  supplementaryOriginalName String?
+  category          String?
+  subcategory       String?
+
+  authorUser User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  likes   PostLike[]
+  savedBy SavedPost[]
+
+  @@index([authorId])
+  @@index([category, subcategory])
+}
+
+model PostLike {
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+}
+
+model SavedPost {
+  userId    Int
+  postId    Int
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+}
+
+model QuizAttempt {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  quizSlug        String
+  score           Int
+  totalQuestions  Int
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([quizSlug])
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }

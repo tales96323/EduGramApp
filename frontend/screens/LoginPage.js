@@ -1,115 +1,193 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  Alert,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, Image, Alert, ScrollView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { API_BASE_URL } from '../config/api';
 
-const LoginPage = ({ setCurrentPage }) => {
+const LoginPage = ({ setCurrentPage, setCurrentUser }) => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = () => {
-    if (email === 'test@example.com' && password === 'password') {
-      Alert.alert('Success', 'Login successful!', [
-        { text: 'OK', onPress: () => setCurrentPage('main') }
-      ]);
+  const showAlert = (title, message) => {
+    if (Platform.OS === 'web') {
+      window.alert(title + ': ' + message);
     } else {
-      Alert.alert('Error', 'Invalid email or password.');
+      Alert.alert(title, message);
     }
   };
 
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
+  };
+
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      showAlert('Erro', 'Preencha todos os campos.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        const user = await res.json();
+        if (setCurrentUser) await setCurrentUser(user);
+        setCurrentPage('main');
+      } else {
+        const errorData = await res.json();
+        showAlert('Erro', errorData.error || 'Email ou senha inválidos.');
+      }
+    } catch (e) {
+      console.error(e);
+      showAlert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (!name || !email || !password) {
+      showAlert('Erro', 'Preencha todos os campos.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      if (res.ok) {
+        const user = await res.json();
+        if (setCurrentUser) await setCurrentUser(user);
+        setCurrentPage('main');
+      } else {
+        const errorData = await res.json();
+        showAlert('Erro', errorData.error || 'Não foi possível criar a conta.');
+      }
+    } catch (e) {
+      console.error(e);
+      showAlert('Erro', 'Não foi possível conectar ao servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    resetForm();
+  };
+
   return (
-    <LinearGradient
-      colors={['#9333ea', '#4f46e5', '#3b82f6']}
-      style={styles.container}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../assets/images/LOGO_GRANDE_SEM_FUNDO.png')}
-              style={styles.logo}
-              resizeMode="contain"
-              onError={() => console.log('Logo image not found')}
-            />
-            <Text style={styles.title}>Sign In</Text>
-            <Text style={styles.subtitle}>
-              Use the account below to sign in.
-            </Text>
-          </View>
-
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="your@example.com"
-                placeholderTextColor="#9ca3af"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
+    <LinearGradient colors={['#9333ea', '#4f46e5', '#3b82f6']} style={{ flex: 1 }}>
+      <SafeAreaView className="flex-1">
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
+        >
+          <View className="w-full max-w-md self-center lg:max-w-5xl lg:flex-row lg:items-center lg:gap-12">
+            <View className="items-center mb-8 lg:flex-1 lg:items-start lg:mb-0">
+              <Image
+                source={require('../assets/images/LOGO_GRANDE_SEM_FUNDO.png')}
+                style={{ width: 112, height: 112, marginBottom: 24 }}
+                resizeMode="contain"
+                onError={() => console.log('Logo image not found')}
               />
+              <Text className="text-3xl lg:text-4xl font-bold text-white mb-2 text-center lg:text-left">
+                {isSignUp ? 'Criar Conta' : 'Sign In'}
+              </Text>
+              <Text className="text-base text-gray-200 text-center lg:text-left lg:max-w-sm">
+                {isSignUp
+                  ? 'Preencha seus dados para começar a explorar a comunidade EduGram.'
+                  : 'Acesse sua conta para continuar acompanhando o feed e fazendo quizzes.'}
+              </Text>
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="••••••••"
-                  placeholderTextColor="#9ca3af"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
-                    size={20}
-                    color="#6b7280"
+            <View className="bg-white rounded-2xl p-6 shadow-lg w-full lg:flex-1 lg:max-w-md">
+              {isSignUp && (
+                <View className="mb-4">
+                  <Text className="text-sm font-semibold text-gray-700 mb-2">Nome</Text>
+                  <TextInput
+                    className="border border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900"
+                    placeholder="Seu nome"
+                    placeholderTextColor="#9ca3af"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
                   />
-                </TouchableOpacity>
+                </View>
+              )}
+
+              <View className="mb-4">
+                <Text className="text-sm font-semibold text-gray-700 mb-2">Email</Text>
+                <TextInput
+                  className="border border-gray-300 rounded-lg px-3 py-3 text-base text-gray-900"
+                  placeholder="your@example.com"
+                  placeholderTextColor="#9ca3af"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
               </View>
-            </View>
 
-            <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
-              <Text style={styles.signInButtonText}>Sign In</Text>
-            </TouchableOpacity>
+              <View className="mb-4">
+                <Text className="text-sm font-semibold text-gray-700 mb-2">
+                  {isSignUp ? 'Senha' : 'Password'}
+                </Text>
+                <View className="flex-row items-center border border-gray-300 rounded-lg">
+                  <TextInput
+                    className="flex-1 px-3 py-3 text-base text-gray-900"
+                    placeholder="••••••••"
+                    placeholderTextColor="#9ca3af"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                  />
+                  <Pressable className="px-3" onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={20}
+                      color="#6b7280"
+                    />
+                  </Pressable>
+                </View>
+              </View>
 
-            <TouchableOpacity>
-              <Text style={styles.forgotPassword}>Forgot Password?</Text>
-            </TouchableOpacity>
+              <Pressable
+                className="bg-primary-600 rounded-lg py-3 mt-2 mb-4 hover:bg-primary-700 active:opacity-80 disabled:opacity-50"
+                onPress={isSignUp ? handleSignUp : handleSignIn}
+                disabled={loading}
+              >
+                <Text className="text-white text-base font-semibold text-center">
+                  {loading ? 'Carregando...' : isSignUp ? 'Criar Conta' : 'Sign In'}
+                </Text>
+              </Pressable>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>Or sign up with</Text>
-              <View style={styles.dividerLine} />
-            </View>
+              {!isSignUp && (
+                <Pressable>
+                  <Text className="text-sm text-gray-700 text-center mb-4">Forgot Password?</Text>
+                </Pressable>
+              )}
 
-            <View style={styles.socialButtons}>
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-google" size={20} color="#6b7280" />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.socialButton}>
-                <Ionicons name="logo-apple" size={20} color="#6b7280" />
-                <Text style={styles.socialButtonText}>Continue with Apple</Text>
-              </TouchableOpacity>
+              <Pressable onPress={toggleMode} className="items-center mt-2">
+                <Text className="text-sm text-gray-700">
+                  {isSignUp ? 'Já tem uma conta? ' : 'Não tem conta? '}
+                  <Text className="text-primary-600 font-semibold">
+                    {isSignUp ? 'Fazer login' : 'Criar conta'}
+                  </Text>
+                </Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -118,150 +196,4 @@ const LoginPage = ({ setCurrentPage }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logo: {
-    width: 112,
-    height: 112,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#e5e7eb',
-    textAlign: 'center',
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 24,
-    marginBottom: 48,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#111827',
-  },
-  eyeButton: {
-    paddingHorizontal: 12,
-  },
-  signInButton: {
-    backgroundColor: '#4f46e5',
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 8,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  signInButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  forgotPassword: {
-    color: '#374151',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#d1d5db',
-  },
-  dividerText: {
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  socialButtons: {
-    gap: 12,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f9fafb',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  socialButtonText: {
-    color: '#374151',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
-
 export default LoginPage;
-

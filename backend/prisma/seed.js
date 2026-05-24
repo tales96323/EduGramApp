@@ -1,137 +1,349 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
-const posts = [
+const SALT_ROUNDS = 12;
+const DEFAULT_PASSWORD = 'password';
+
+const users = [
     {
-        author: 'Dr. Ana Silva',
+        email: 'ana@example.com',
+        name: 'Dra. Ana Silva',
+        role: 'professor',
+        bio: 'Pesquisadora em física teórica com foco em mecânica quântica e teoria de campos.',
+        institution: 'USP — Instituto de Física',
+        field: 'physics',
+        verified: true,
+        avatarUrl: 'https://placehold.co/200x200/a78bfa/ffffff?text=AS',
         profilePic: 'https://placehold.co/40x40/a78bfa/ffffff?text=AS',
+    },
+    {
+        email: 'carlos@example.com',
+        name: 'Prof. Carlos Mendes',
+        role: 'professor',
+        bio: 'Professor de biologia, especialista em ecologia e sustentabilidade ambiental.',
+        institution: 'UFRJ — Departamento de Ecologia',
+        field: 'biology',
+        verified: true,
+        avatarUrl: 'https://placehold.co/200x200/4ade80/ffffff?text=CM',
+        profilePic: 'https://placehold.co/40x40/4ade80/ffffff?text=CM',
+    },
+    {
+        email: 'revista@example.com',
+        name: 'Revista BioTech',
+        role: 'revista',
+        bio: 'Publicação científica focada em biotecnologia e engenharia genética.',
+        institution: 'BioTech Publicações',
+        field: 'biology',
+        verified: true,
+        avatarUrl: 'https://placehold.co/200x200/fcd34d/ffffff?text=RB',
+        profilePic: 'https://placehold.co/40x40/fcd34d/ffffff?text=RB',
+    },
+    {
+        email: 'aluno1@example.com',
+        name: 'Bruno Costa',
+        role: 'aluno',
+        bio: 'Estudante de graduação em física, interessado em divulgação científica.',
+        institution: 'UNICAMP',
+        field: 'physics',
+        verified: false,
+        avatarUrl: 'https://placehold.co/200x200/3b82f6/ffffff?text=BC',
+        profilePic: 'https://placehold.co/40x40/3b82f6/ffffff?text=BC',
+    },
+    {
+        email: 'aluno2@example.com',
+        name: 'Marina Lopes',
+        role: 'aluno',
+        bio: 'Estudante de biotecnologia. Curiosa por edição gênica e bioética.',
+        institution: 'UFMG',
+        field: 'biology',
+        verified: false,
+        avatarUrl: 'https://placehold.co/200x200/3b82f6/ffffff?text=ML',
+        profilePic: 'https://placehold.co/40x40/3b82f6/ffffff?text=ML',
+    },
+    {
+        email: 'test@example.com',
+        name: 'Usuário Teste',
+        role: 'aluno',
+        bio: 'Conta para testes manuais.',
+        institution: null,
+        field: null,
+        verified: false,
+        avatarUrl: 'https://placehold.co/200x200/3b82f6/ffffff?text=UT',
+        profilePic: 'https://placehold.co/40x40/3b82f6/ffffff?text=UT',
+    },
+];
+
+const postsData = [
+    {
+        authorEmail: 'ana@example.com',
         title: 'Desvendando a Física Quântica',
         image: 'fisica-quantica.jpg',
-        fullContent: 'Uma introdução aos princípios fundamentais da mecânica quântica e suas aplicações no dia a dia. Este artigo explora conceitos como superposição, entrelaçamento e o princípio da incerteza de Heisenberg, explicando como esses fenómenos bizarros moldam a realidade a nível subatómico e as suas implicações para tecnologias futuras, como a computação quântica. Para entender a física quântica, é essencial mergulhar nas suas raízes históricas, desde as primeiras teorias de Max Planck e Albert Einstein até o desenvolvimento da mecânica matricial e da mecânica ondulatória por Werner Heisenberg e Erwin Schrödinger, respetivamente. A superposição, um dos conceitos mais contraintuitivos, descreve a capacidade de uma partícula existir em múltiplos estados simultaneamente até que seja observada. O entrelaçamento, por sua vez, liga o destino de duas ou mais partículas, independentemente da distância que as separa, de modo que a medição do estado de uma afeta instantaneamente o estado da outra. Estes conceitos não são apenas curiosidades teóricas; eles são a base para o desenvolvimento de tecnologias revolucionárias, como computadores quânticos, que prometem resolver problemas complexos que estão além das capacidades dos computadores clássicos, e novas formas de criptografia inquebrável, conhecida como criptografia quântica. Além disso, a física quântica desempenha um papel crucial na compreensão de fenómenos em diversas áreas da ciência, desde a estrutura atómica e molecular até o comportamento de materiais em temperaturas extremamente baixas, e a forma como a luz interage com a matéria.',
-        simplifiedSnippet: 'Uma introdução aos princípios fundamentais da mecânica quântica e suas aplicações no dia a dia. Este artigo explora conceitos como superposição, entrelaçamento e o princípio da incerteza de Heisenberg, explicando como esses fenómenos bizarros moldam a realidade a nível subatómico e as suas implicações para tecnologias futuras, como a computação quântica.',
-        likes: 1224,
-        comments: 132,
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2h ago
-        isSimplifying: false,
+        abstract: 'Este artigo apresenta uma introdução acessível aos princípios fundamentais da mecânica quântica, abordando superposição, entrelaçamento e o princípio da incerteza de Heisenberg, além de discutir implicações para a computação quântica.',
+        fullContent: 'Uma introdução aos princípios fundamentais da mecânica quântica e suas aplicações no dia a dia. Este artigo explora conceitos como superposição, entrelaçamento e o princípio da incerteza de Heisenberg, explicando como esses fenómenos bizarros moldam a realidade a nível subatómico e as suas implicações para tecnologias futuras, como a computação quântica.',
+        simplifiedSnippet: 'Uma introdução aos princípios fundamentais da mecânica quântica e suas aplicações no dia a dia.',
+        keywords: ['mecânica quântica', 'superposição', 'entrelaçamento', 'incerteza', 'computação quântica'],
+        doi: '10.5281/edugram.2026.0001',
+        references: 'HEISENBERG, W. Physics and Philosophy. 1958.\nGRIFFITHS, D. J. Introduction to Quantum Mechanics. 3rd ed. 2018.\nNIELSEN, M. A.; CHUANG, I. L. Quantum Computation and Quantum Information. 2010.',
+        category: 'physics',
+        subcategory: 'quantum_mechanics',
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
     },
     {
-        author: 'Revista BioTech',
-        profilePic: 'https://placehold.co/40x40/fcd34d/ffffff?text=RB',
+        authorEmail: 'revista@example.com',
         title: 'Engenharia Genética: O Futuro da Medicina',
         image: 'engenharia-genetica.jpg',
-        fullContent: 'Avanços recentes na edição de genes e como eles estão revolucionando o tratamento de doenças genéticas. A tecnologia CRISPR-Cas9, em particular, abriu portas para a correção de mutações genéticas e a criação de terapias inovadoras para condições como a fibrose cística e a anemia falciforme, prometendo um futuro onde doenças hereditárias podem ser curadas na sua origem. A edição genética, especialmente com a ferramenta CRISPR-Cas9, tem o potencial de transformar radicalmente a medicina. Esta técnica permite aos cientistas editar com precisão o ADN, removendo, adicionando ou alterando sequências genéticas específicas. Isso significa que podemos, em teoria, corrigir mutações genéticas que causam doenças hereditárias graves. Além das aplicações em doenças genéticas, a engenharia genética está a ser explorada para desenvolver novas terapias contra o cancro, criar culturas mais resistentes a pragas e doenças, e até mesmo para a produção de biocombustíveis. No entanto, o rápido avanço desta tecnologia levanta importantes questões éticas e sociais sobre a sua aplicação, a segurança e as implicações a longo prazo para a humanidade e o meio ambiente.',
-        simplifiedSnippet: 'Avanços recentes na edição de genes e como eles estão revolucionando o tratamento de doenças genéticas. A tecnologia CRISPR-Cas9, em particular, abriu portas para a correção de mutações genéticas e a criação de terapias inovadoras para condições como a fibrose cística e a anemia falciforme, prometendo um futuro onde doenças hereditárias podem ser curadas na sua origem.',
-        likes: 2819,
-        comments: 178,
-        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5h ago
-        isSimplifying: false,
+        abstract: 'Revisão sobre os avanços recentes em edição genética, com foco na tecnologia CRISPR-Cas9 e suas aplicações no tratamento de doenças genéticas como fibrose cística e anemia falciforme.',
+        fullContent: 'Avanços recentes na edição de genes e como eles estão revolucionando o tratamento de doenças genéticas. A tecnologia CRISPR-Cas9, em particular, abriu portas para a correção de mutações genéticas e a criação de terapias inovadoras para condições como a fibrose cística e a anemia falciforme.',
+        simplifiedSnippet: 'Avanços recentes na edição de genes e como eles estão revolucionando o tratamento de doenças genéticas.',
+        keywords: ['CRISPR-Cas9', 'edição gênica', 'terapia genética', 'medicina', 'biotecnologia'],
+        doi: '10.5281/edugram.2026.0002',
+        references: 'DOUDNA, J. A.; CHARPENTIER, E. The new frontier of genome engineering with CRISPR-Cas9. Science, 2014.\nJINEK, M. et al. A programmable dual-RNA-guided DNA endonuclease. Science, 2012.',
+        category: 'biology',
+        subcategory: 'genetics',
+        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
     },
     {
-        author: 'Prof. Carlos Mendes',
-        profilePic: 'https://placehold.co/40x40/4ade80/ffffff?text=CM',
+        authorEmail: 'carlos@example.com',
         title: 'A Importância da Sustentabilidade Ambiental',
         image: 'sustentabilidade.jpg',
-        fullContent: 'Explorando os desafios ambientais atuais e soluções inovadoras para um futuro mais sustentável. Este artigo aborda a crise climática, a perda de biodiversidade e a poluição, destacando a necessidade urgente de transição para energias renováveis, economia circular e práticas agrícolas sustentáveis para proteger o nosso planeta para as futuras gerações. A sustentabilidade ambiental é um pilar fundamental para o bem-estar do planeta e das futuras gerações. Enfrentamos desafios prementes como as alterações climáticas, impulsionadas pela emissão de gases de efeito estufa, a rápida perda de biodiversidade devido à destruição de habitats e a poluição do ar, da água e do solo. Para combater esses problemas, é crucial adotar soluções como a transição energética para fontes renováveis (solar, eólica), a implementação de uma economia circular que minimize o desperdício, e a promoção de práticas agrícolas que preservem os ecossistemas e a fertilidade do solo. A educação ambiental e o engajamento da comunidade também desempenham um papel vital na construção de um futuro mais equilibrado e resiliente, onde o desenvolvimento humano coexista harmoniosamente com a natureza.',
-        simplifiedSnippet: 'Explorando os desafios ambientais atuais e soluções inovadoras para um futuro mais sustentável. Este artigo aborda a crise climática, a perda de biodiversidade e a poluição, destacando a necessidade urgente de transição para energias renováveis, economia circular e práticas agrícolas sustentáveis para proteger o nosso planeta para as futuras gerações.',
-        likes: 980,
-        comments: 115,
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        isSimplifying: false,
+        abstract: 'Análise dos principais desafios ambientais contemporâneos — crise climática, perda de biodiversidade e poluição — e discussão de soluções inovadoras para um futuro mais sustentável.',
+        fullContent: 'Explorando os desafios ambientais atuais e soluções inovadoras para um futuro mais sustentável. Este artigo aborda a crise climática, a perda de biodiversidade e a poluição.',
+        simplifiedSnippet: 'Explorando os desafios ambientais atuais e soluções inovadoras para um futuro mais sustentável.',
+        keywords: ['sustentabilidade', 'mudança climática', 'biodiversidade', 'poluição', 'conservação'],
+        doi: '10.5281/edugram.2026.0003',
+        references: 'IPCC. Climate Change 2023: Synthesis Report. 2023.\nROCKSTRÖM, J. et al. A safe operating space for humanity. Nature, 2009.',
+        category: 'biology',
+        subcategory: 'ecology',
+        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
     },
     {
-        author: 'Instituto Astronomia BR',
-        profilePic: 'https://placehold.co/40x40/60a5fa/ffffff?text=AB',
-        title: 'Explorando os Segredos dos Buracos Negros',
-        image: 'astronomia-br.jpg',
-        fullContent: 'Buracos negros são uma das entidades mais misteriosas do universo. Este artigo explora como eles se formam, sua relação com a relatividade geral, e como estão ligados à evolução galáctica. Também abordamos as descobertas recentes do telescópio Event Horizon e as implicações para a física teórica.',
-        simplifiedSnippet: 'Buracos negros são entidades misteriosas que desafiam a física moderna. Descubra como se formam e por que são tão importantes para a compreensão do universo.',
-        likes: 1560,
-        comments: 89,
-        createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3h ago
-        isSimplifying: false,
-    },
-    {
-        author: 'Dra. Luiza Torres',
-        profilePic: 'https://placehold.co/40x40/f472b6/ffffff?text=LT',
-        title: 'Inteligência Artificial na Medicina Moderna',
-        image: 'medicina-ia.jpg',
-        fullContent: 'A inteligência artificial está a transformar diagnósticos, terapias personalizadas e a gestão hospitalar. Este artigo analisa aplicações práticas, desafios éticos e o futuro promissor da IA na medicina.',
-        simplifiedSnippet: 'A IA está revolucionando a medicina com diagnósticos mais precisos e tratamentos personalizados. Saiba como essa tecnologia está sendo aplicada nos hospitais.',
-        likes: 2143,
-        comments: 142,
-        createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000), // 8h ago
-        isSimplifying: false,
-    },
-    {
-        author: 'Ecologia Global',
-        profilePic: 'https://placehold.co/40x40/34d399/ffffff?text=EG',
-        title: 'Oceanos em Risco: A Realidade da Poluição Marinha',
-        image: 'oceanos-risco.jpg',
-        fullContent: 'Os oceanos enfrentam uma crise sem precedentes com toneladas de plástico, derrames de petróleo e mudanças climáticas afetando ecossistemas frágeis. Este artigo examina as principais causas e propõe ações urgentes para reverter esse cenário.',
-        simplifiedSnippet: 'A poluição marinha ameaça a vida nos oceanos. Entenda as causas e o que podemos fazer para proteger esse ecossistema vital.',
-        likes: 1875,
-        comments: 99,
-        createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000), // 12h ago
-        isSimplifying: false,
-    },
-    {
-        author: 'NeuroLab Brasil',
-        profilePic: 'https://placehold.co/40x40/818cf8/ffffff?text=NB',
-        title: 'O Cérebro Humano e a Consciência',
-        image: 'conciencia.jpg',
-        fullContent: 'Pesquisas em neurociência estão desvendando os mecanismos por trás da consciência humana. Este artigo explora as regiões cerebrais envolvidas, as teorias contemporâneas e os experimentos mais avançados da área.',
-        simplifiedSnippet: 'Como a consciência surge no cérebro? Veja as descobertas mais recentes da neurociência sobre esse grande mistério.',
-        likes: 1624,
-        comments: 78,
-        createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000), // 14h ago
-        isSimplifying: false,
-    },
-    {
-        author: 'Revista Pesquisa FAPESP',
-        profilePic: 'https://placehold.co/40x40/f87171/ffffff?text=CF',
-        title: 'Mudanças Climáticas: Impactos Visíveis',
-        image: 'sustentabilidade.jpg',
-        fullContent: 'As mudanças climáticas não são mais uma previsão futura — já estão afetando nosso dia a dia. De eventos extremos à elevação dos mares, este artigo analisa dados científicos e as implicações para políticas públicas.',
-        simplifiedSnippet: 'As mudanças climáticas estão em curso. Conheça os sinais visíveis e o que a ciência propõe para enfrentá-las.',
-        likes: 2093,
-        comments: 123,
-        createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        isSimplifying: false,
-    },
-    {
-        author: 'Dra. Marina Farias',
-        profilePic: 'https://placehold.co/40x40/38bdf8/ffffff?text=MF',
+        authorEmail: 'ana@example.com',
         title: 'A Física das Partículas Subatômicas',
         image: 'subatomico.jpg',
-        fullContent: 'Este artigo oferece uma visão geral das partículas fundamentais, como quarks, léptons e bósons. Também discute o papel do Grande Colisor de Hádrons (LHC) e as descobertas recentes que desafiam o Modelo Padrão.',
-        simplifiedSnippet: 'Quarks, léptons e o LHC: entenda como a física de partículas está revolucionando nosso entendimento do universo.',
-        likes: 1345,
-        comments: 66,
-        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
-        isSimplifying: false,
+        abstract: 'Visão geral das partículas fundamentais — quarks, léptons e bósons — e do papel do Grande Colisor de Hádrons (LHC) na investigação da estrutura da matéria.',
+        fullContent: 'Este artigo oferece uma visão geral das partículas fundamentais, como quarks, léptons e bósons. Também discute o papel do Grande Colisor de Hádrons (LHC).',
+        simplifiedSnippet: 'Qual o papel do Grande Colisor de Hádrons (LHC) e as partículas fundamentais.',
+        keywords: ['partículas subatômicas', 'quarks', 'léptons', 'bósons', 'LHC', 'modelo padrão'],
+        doi: '10.5281/edugram.2026.0004',
+        references: 'GRIFFITHS, D. Introduction to Elementary Particles. 2nd ed. 2008.\nATLAS Collaboration. Observation of a new particle. Physics Letters B, 2012.',
+        category: 'physics',
+        subcategory: 'quantum_mechanics',
+        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+    },
+];
+
+// alunos seguem professores/revista; um professor segue outro
+const followsData = [
+    { follower: 'aluno1@example.com', following: 'ana@example.com' },
+    { follower: 'aluno1@example.com', following: 'carlos@example.com' },
+    { follower: 'aluno2@example.com', following: 'carlos@example.com' },
+    { follower: 'aluno2@example.com', following: 'revista@example.com' },
+    { follower: 'carlos@example.com', following: 'ana@example.com' },
+];
+
+// test@example.com tem centralidade total: segue todo mundo e é seguido por todos.
+const TEST_EMAIL = 'test@example.com';
+for (const u of users) {
+    if (u.email === TEST_EMAIL) continue;
+    followsData.push({ follower: TEST_EMAIL, following: u.email });
+    followsData.push({ follower: u.email, following: TEST_EMAIL });
+}
+
+// (email, titlePrefix) — match por prefixo de título já existente
+const likesData = [
+    { user: 'aluno1@example.com', titlePrefix: 'Desvendando' },
+    { user: 'aluno1@example.com', titlePrefix: 'A Física das Partículas' },
+    { user: 'aluno2@example.com', titlePrefix: 'Engenharia Genética' },
+    { user: 'aluno2@example.com', titlePrefix: 'A Importância' },
+    { user: 'test@example.com', titlePrefix: 'Desvendando' },
+    { user: 'carlos@example.com', titlePrefix: 'Desvendando' },
+];
+
+const quizAttemptsData = [
+    {
+        user: 'aluno1@example.com',
+        quizSlug: 'physics-basics',
+        score: 8,
+        totalQuestions: 10,
+        finishedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
     },
     {
-        author: 'Revista Ciência e Sociedade',
-        profilePic: 'https://placehold.co/40x40/c084fc/ffffff?text=CS',
-        title: 'Tecnologia e Ética: Dilemas do Século XXI',
-        image: 'tec-etica.jpg',
-        fullContent: 'Com o avanço acelerado da tecnologia, surgem dilemas éticos sobre privacidade, vigilância, automação e bioética. Este artigo discute os principais debates e a importância de uma abordagem responsável.',
-        simplifiedSnippet: 'Avanços tecnológicos trazem grandes benefícios — e dilemas éticos. Veja como a sociedade está lidando com questões como privacidade e IA.',
-        likes: 1980,
-        comments: 101,
-        createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
-        isSimplifying: false,
-    }
+        user: 'aluno1@example.com',
+        quizSlug: 'quantum-intro',
+        score: 7,
+        totalQuestions: 10,
+        finishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
+    },
+    {
+        user: 'aluno2@example.com',
+        quizSlug: 'genetics-intro',
+        score: 9,
+        totalQuestions: 10,
+        finishedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
+    },
 ];
+
+async function seedUsers() {
+    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD, SALT_ROUNDS);
+    for (const u of users) {
+        await prisma.user.upsert({
+            where: { email: u.email },
+            update: {
+                name: u.name,
+                role: u.role,
+                bio: u.bio,
+                avatarUrl: u.avatarUrl,
+                profilePic: u.profilePic,
+                institution: u.institution,
+                field: u.field,
+                verified: u.verified,
+            },
+            create: {
+                email: u.email,
+                passwordHash,
+                name: u.name,
+                role: u.role,
+                bio: u.bio,
+                avatarUrl: u.avatarUrl,
+                profilePic: u.profilePic,
+                institution: u.institution,
+                field: u.field,
+                verified: u.verified,
+            },
+        });
+        console.log(`✓ user: ${u.email}`);
+    }
+}
+
+async function seedPosts() {
+    for (const p of postsData) {
+        const author = await prisma.user.findUniqueOrThrow({ where: { email: p.authorEmail } });
+
+        // posts não têm unique natural; busca por (authorId, title) para idempotência
+        const existing = await prisma.post.findFirst({
+            where: { authorId: author.id, title: p.title },
+        });
+
+        const data = {
+            authorId: author.id,
+            author: author.name,
+            profilePic: author.profilePic || '',
+            title: p.title,
+            image: p.image,
+            abstract: p.abstract,
+            fullContent: p.fullContent,
+            simplifiedSnippet: p.simplifiedSnippet,
+            keywords: p.keywords || [],
+            doi: p.doi,
+            references: p.references,
+            category: p.category,
+            subcategory: p.subcategory,
+            createdAt: p.createdAt,
+        };
+
+        if (existing) {
+            await prisma.post.update({ where: { id: existing.id }, data });
+            console.log(`✓ post (updated): ${p.title}`);
+        } else {
+            await prisma.post.create({ data });
+            console.log(`✓ post (created): ${p.title}`);
+        }
+    }
+}
+
+async function seedFollows() {
+    for (const f of followsData) {
+        const follower = await prisma.user.findUniqueOrThrow({ where: { email: f.follower } });
+        const following = await prisma.user.findUniqueOrThrow({ where: { email: f.following } });
+        await prisma.follow.upsert({
+            where: {
+                followerId_followingId: { followerId: follower.id, followingId: following.id },
+            },
+            update: {},
+            create: { followerId: follower.id, followingId: following.id },
+        });
+    }
+    console.log(`✓ follows: ${followsData.length}`);
+}
+
+async function seedLikes() {
+    for (const l of likesData) {
+        const user = await prisma.user.findUniqueOrThrow({ where: { email: l.user } });
+        const post = await prisma.post.findFirst({
+            where: { title: { startsWith: l.titlePrefix } },
+        });
+        if (!post) {
+            console.warn(`! post not found for prefix: ${l.titlePrefix}`);
+            continue;
+        }
+        await prisma.postLike.upsert({
+            where: { postId_userId: { postId: post.id, userId: user.id } },
+            update: {},
+            create: { postId: post.id, userId: user.id },
+        });
+    }
+    console.log(`✓ likes: ${likesData.length}`);
+}
+
+async function seedQuizAttempts() {
+    for (const q of quizAttemptsData) {
+        const user = await prisma.user.findUniqueOrThrow({ where: { email: q.user } });
+        // idempotência: 1 attempt por (user, quizSlug, finishedAt)
+        const existing = await prisma.quizAttempt.findFirst({
+            where: { userId: user.id, quizSlug: q.quizSlug, finishedAt: q.finishedAt },
+        });
+        if (existing) continue;
+        await prisma.quizAttempt.create({
+            data: {
+                userId: user.id,
+                quizSlug: q.quizSlug,
+                score: q.score,
+                totalQuestions: q.totalQuestions,
+                finishedAt: q.finishedAt,
+            },
+        });
+    }
+    console.log(`✓ quiz attempts: ${quizAttemptsData.length}`);
+}
+
+async function recalcCounters() {
+    const allUsers = await prisma.user.findMany();
+    for (const user of allUsers) {
+        const [followersCount, followingCount, postsCount, attempts] = await Promise.all([
+            prisma.follow.count({ where: { followingId: user.id } }),
+            prisma.follow.count({ where: { followerId: user.id } }),
+            prisma.post.count({ where: { authorId: user.id } }),
+            prisma.quizAttempt.findMany({
+                where: { userId: user.id, finishedAt: { not: null } },
+                select: { score: true, quizSlug: true },
+            }),
+        ]);
+        const quizPoints = attempts.reduce((sum, a) => sum + a.score, 0);
+        const quizzesCompleted = new Set(attempts.map((a) => a.quizSlug)).size;
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { followersCount, followingCount, postsCount, quizPoints, quizzesCompleted },
+        });
+    }
+
+    const allPosts = await prisma.post.findMany({ select: { id: true } });
+    for (const post of allPosts) {
+        const likesCount = await prisma.postLike.count({ where: { postId: post.id } });
+        await prisma.post.update({ where: { id: post.id }, data: { likesCount } });
+    }
+    console.log(`✓ counters recalculated (users: ${allUsers.length}, posts: ${allPosts.length})`);
+}
 
 async function main() {
     console.log('Start seeding ...');
-    for (const post of posts) {
-        const createdPost = await prisma.post.create({
-            data: post,
-        });
-        console.log(`Created post with id: ${createdPost.id}`);
-    }
+    await seedUsers();
+    await seedPosts();
+    await seedFollows();
+    await seedLikes();
+    await seedQuizAttempts();
+    await recalcCounters();
     console.log('Seeding finished.');
 }
 

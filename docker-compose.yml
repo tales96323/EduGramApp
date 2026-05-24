@@ -31,7 +31,12 @@ services:
       - ./backend:/app
       - /app/node_modules
     command: >
-      sh -c "npx prisma migrate deploy && npx prisma generate && npm run seed && npm start"
+      sh -c "npx prisma db push && npx prisma generate && npm run seed && npm start"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build: ./frontend
@@ -44,10 +49,12 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
     environment:
       - REACT_NATIVE_PACKAGER_HOSTNAME=localhost
       - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
-      - CI=1
     stdin_open: true
     tty: true
     command: npm start

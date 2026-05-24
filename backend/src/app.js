@@ -6,10 +6,13 @@ const routes = require('./routes');
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// Serve static files (images)
+// Serve static files (images, pdfs and supplementary attachments)
 app.use('/images', express.static(path.join(__dirname, '../public/images')));
+app.use('/pdfs', express.static(path.join(__dirname, '../public/pdfs')));
+app.use('/files', express.static(path.join(__dirname, '../public/files')));
 
 // API Routes
 app.use('/', routes);

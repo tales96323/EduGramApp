@@ -1,62 +1,60 @@
-import React, { useState } from 'react';
+import './global.css';
+import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
-// Import screens
 import WelcomePage from './screens/WelcomePage';
 import LoginPage from './screens/LoginPage';
-import FeedPage from './screens/FeedPage';
-import KnowledgeTreePage from './screens/KnowledgeTreePage';
-import ProfilePage from './screens/ProfilePage';
-import QuizPage from './screens/QuizPage';
-
-const Tab = createBottomTabNavigator();
+import AppShell from './components/AppShell';
+import { loadUser, saveUser, clearUser } from './lib/auth';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('welcome');
-  const [userType, setUserType] = useState('aluno');
+  const [currentUser, setCurrentUserState] = useState(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
-  // Function to render the correct page based on state
+  useEffect(() => {
+    (async () => {
+      const stored = await loadUser();
+      if (stored) {
+        setCurrentUserState(stored);
+        setCurrentPage('main');
+      }
+      setBootstrapping(false);
+    })();
+  }, []);
+
+  const setCurrentUser = async (user) => {
+    setCurrentUserState(user);
+    if (user) await saveUser(user);
+    else await clearUser();
+  };
+
+  const logout = async () => {
+    await clearUser();
+    setCurrentUserState(null);
+    setCurrentPage('welcome');
+  };
+
+  if (bootstrapping) {
+    return (
+      <SafeAreaProvider>
+        <View className="flex-1 items-center justify-center bg-white">
+          <ActivityIndicator size="large" color="#4f46e5" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'welcome':
         return <WelcomePage setCurrentPage={setCurrentPage} />;
       case 'login':
-        return <LoginPage setCurrentPage={setCurrentPage} />;
+        return <LoginPage setCurrentPage={setCurrentPage} setCurrentUser={setCurrentUser} />;
       case 'main':
-        return (
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ focused, color, size }) => {
-                let iconName;
-
-                if (route.name === 'Feed') {
-                  iconName = focused ? 'home' : 'home-outline';
-                } else if (route.name === 'Árvore') {
-                  iconName = focused ? 'library' : 'library-outline';
-                } else if (route.name === 'Quiz') {
-                  iconName = focused ? 'bulb' : 'bulb-outline';
-                } else if (route.name === 'Perfil') {
-                  iconName = focused ? 'person' : 'person-outline';
-                }
-
-                return <Ionicons name={iconName} size={size} color={color} />;
-              },
-              tabBarActiveTintColor: '#4f46e5',
-              tabBarInactiveTintColor: 'gray',
-              headerShown: false,
-            })}
-          >
-            <Tab.Screen name="Feed" component={FeedPage} />
-            <Tab.Screen name="Árvore" component={KnowledgeTreePage} />
-            <Tab.Screen name="Quiz" component={QuizPage} />
-            <Tab.Screen name="Perfil">
-              {() => <ProfilePage userType={userType} />}
-            </Tab.Screen>
-          </Tab.Navigator>
-        );
+        return <AppShell currentUser={currentUser} onLogout={logout} onUpdateUser={setCurrentUser} />;
       default:
         return <WelcomePage setCurrentPage={setCurrentPage} />;
     }
@@ -64,10 +62,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        {renderPage()}
-      </NavigationContainer>
+      <NavigationContainer>{renderPage()}</NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
