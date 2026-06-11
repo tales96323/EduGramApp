@@ -245,31 +245,34 @@ const ProfilePage = ({ currentUser, onLogout, onUpdateUser }) => {
           </View>
         </View>
 
-        {/* Minhas Publicações */}
-        <View className="px-4 lg:px-6 pb-8">
-          <Text className="text-lg font-bold text-gray-900 mb-3">
-            Minhas Publicações {posts.length > 0 ? `(${posts.length})` : ''}
-          </Text>
+        {/* Minhas Publicações — apenas para quem publica (professor/revista).
+            Alunos não fazem postagens, então a seção fica oculta. */}
+        {(role === 'professor' || role === 'revista') && (
+          <View className="px-4 lg:px-6 pb-8">
+            <Text className="text-lg font-bold text-gray-900 mb-3">
+              Minhas Publicações {posts.length > 0 ? `(${posts.length})` : ''}
+            </Text>
 
-          {loadingPosts ? (
-            <ActivityIndicator size="large" color="#4f46e5" style={{ marginTop: 16 }} />
-          ) : posts.length === 0 ? (
-            <View className="bg-white rounded-xl p-8 items-center shadow-sm">
-              <Ionicons name="document-text-outline" size={40} color="#9ca3af" />
-              <Text className="text-gray-500 text-center mt-3">
-                Você ainda não publicou nenhum artigo.
-              </Text>
-            </View>
-          ) : (
-            <View className="lg:flex-row lg:flex-wrap lg:gap-x-[2%]">
-              {posts.map((post) => (
-                <View key={post.id} className="lg:w-[49%]">
-                  <ScientificPostCard post={post} onPress={() => setSelectedPost(post)} />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
+            {loadingPosts ? (
+              <ActivityIndicator size="large" color="#4f46e5" style={{ marginTop: 16 }} />
+            ) : posts.length === 0 ? (
+              <View className="bg-white rounded-xl p-8 items-center shadow-sm">
+                <Ionicons name="document-text-outline" size={40} color="#9ca3af" />
+                <Text className="text-gray-500 text-center mt-3">
+                  Você ainda não publicou nenhum artigo.
+                </Text>
+              </View>
+            ) : (
+              <View className="lg:flex-row lg:flex-wrap lg:gap-x-[2%]">
+                {posts.map((post) => (
+                  <View key={post.id} className="lg:w-[49%]">
+                    <ScientificPostCard post={post} onPress={() => setSelectedPost(post)} />
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         <Text className="text-center text-xs text-gray-400 mb-8">Versão 1.0.0</Text>
       </ScrollView>

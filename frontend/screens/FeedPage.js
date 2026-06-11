@@ -18,6 +18,7 @@ import { API_BASE_URL } from '../config/api';
 import useBreakpoint from '../hooks/useBreakpoint';
 import { fetchSavedIds, toggleSave } from '../lib/posts';
 import EditPostPage from './EditPostPage';
+import AuthorProfilePage from './AuthorProfilePage';
 
 // Definido fora do componente para o TextInput não perder foco a cada render
 const FormField = ({ label, ...props }) => (
@@ -86,6 +87,7 @@ export default function FeedPage({ currentUser }) {
   const [selectedPostForFullView, setSelectedPostForFullView] = useState(null);
   const [showFullContentModal, setShowFullContentModal] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
+  const [viewingAuthorId, setViewingAuthorId] = useState(null);
 
   const [showAddPostModal, setShowAddPostModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -226,11 +228,16 @@ export default function FeedPage({ currentUser }) {
       className={`bg-white rounded-xl shadow overflow-hidden mb-4 ${numColumns > 1 ? 'flex-1 mx-2' : ''} hover:shadow-lg`}
     >
       <View className="flex-row items-center p-4">
-        <Image source={{ uri: post.profilePic }} className="w-10 h-10 rounded-full mr-3" />
-        <View className="flex-1">
-          <Text className="font-semibold text-gray-800">{post.author}</Text>
-          <Text className="text-xs text-gray-500">{post.time}</Text>
-        </View>
+        <Pressable
+          onPress={() => post.authorId && setViewingAuthorId(post.authorId)}
+          className="flex-row items-center flex-1 hover:opacity-70"
+        >
+          <Image source={{ uri: post.profilePic }} className="w-10 h-10 rounded-full mr-3" />
+          <View className="flex-1">
+            <Text className="font-semibold text-gray-800">{post.author}</Text>
+            <Text className="text-xs text-gray-500">{post.time}</Text>
+          </View>
+        </Pressable>
         <MoreVertical size={20} color="#6b7280" />
       </View>
 
@@ -269,6 +276,10 @@ export default function FeedPage({ currentUser }) {
       </View>
     </Pressable>
   );
+
+  if (viewingAuthorId) {
+    return <AuthorProfilePage authorId={viewingAuthorId} onBack={() => setViewingAuthorId(null)} />;
+  }
 
   if (editingPost) {
     return (
