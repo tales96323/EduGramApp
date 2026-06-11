@@ -9,6 +9,10 @@ import LoginPage from './screens/LoginPage';
 import AppShell from './components/AppShell';
 import { loadUser, saveUser, clearUser } from './lib/auth';
 
+// Na demo do portfólio, cada refresh deve voltar para a tela de Welcome
+// (sem restaurar a sessão salva).
+const DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState('welcome');
   const [currentUser, setCurrentUserState] = useState(null);
@@ -16,10 +20,12 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      const stored = await loadUser();
-      if (stored) {
-        setCurrentUserState(stored);
-        setCurrentPage('main');
+      if (!DEMO) {
+        const stored = await loadUser();
+        if (stored) {
+          setCurrentUserState(stored);
+          setCurrentPage('main');
+        }
       }
       setBootstrapping(false);
     })();

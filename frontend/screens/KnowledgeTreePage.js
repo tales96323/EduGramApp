@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, Modal, ActivityIndicator, ScrollView, Linking } from 'react-native';
-import { WebView } from 'react-native-webview';
+import WebView from '../components/WebViewCompat';
 import { X } from 'lucide-react-native';
 import { API_BASE_URL } from '../config/api';
 import useBreakpoint from '../hooks/useBreakpoint';
@@ -319,7 +319,7 @@ export default function KnowledgeTreePage() {
           const g = svg.append("g");
           const tree = d3.tree().size([2 * Math.PI, Math.min(width, height) / 2 - 60])
             .separation((a, b) => (a.parent == b.parent ? 1 : 2) / a.depth);
-          const postMessage = (m) => { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(m)); };
+          const postMessage = (m) => { const s = JSON.stringify(m); if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s); else if (window.parent && window.parent !== window) window.parent.postMessage(s, '*'); };
           const zoomBehavior = d3.zoom().scaleExtent([0.5, 4]).on("zoom", (e) => g.attr("transform", e.transform));
           svg.call(zoomBehavior);
           root = d3.hierarchy(data, d => d.children || d._children);

@@ -1,3 +1,6 @@
+// Demo do portfólio: precisa rodar ANTES de tudo para interceptar a API.
+import './lib/demoBootstrap';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
